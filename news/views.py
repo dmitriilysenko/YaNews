@@ -80,6 +80,7 @@ class NewsDetailView(generic.View):
 
 class CommentBase(LoginRequiredMixin):
     """Базовый класс для работы с комментариями."""
+
     model = Comment
 
     def get_success_url(self):
@@ -95,10 +96,12 @@ class CommentBase(LoginRequiredMixin):
 
 class CommentUpdate(CommentBase, generic.UpdateView):
     """Редактирование комментария."""
+
     template_name = 'news/edit.html'
     form_class = CommentForm
 
 
 class CommentDelete(CommentBase, generic.DeleteView):
     """Удаление комментария."""
+
     template_name = 'news/delete.html'

@@ -20,6 +20,8 @@ media/
 
 db.sqlite3
 
+pylintrc
+
 htmlcov/
 .coverage
 .coverage.*
