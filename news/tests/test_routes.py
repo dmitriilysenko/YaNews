@@ -6,6 +6,7 @@ from django.urls import reverse
 
 from news.models import Comment, News
 
+
 User = get_user_model()
 
 
@@ -20,7 +21,7 @@ class TestRoutes(TestCase):
             news=cls.news,
             author=cls.author,
             text='Текст комментария'
-        ) 
+        )
 
     def test_pages_availability(self):
 
@@ -29,13 +30,15 @@ class TestRoutes(TestCase):
             ('news:detail', (self.news.id,)),
             ('users:login', None),
             ('users:signup', None),
+            ('users:logout', None),
         )
         for name, args in urls:
             with self.subTest(name=name):
-                # Передаём имя и позиционный аргумент в reverse()
-                # и получаем адрес страницы для GET-запроса:
                 url = reverse(name, args=args)
-                response = self.client.get(url)
+                if name == 'users:logout':
+                    response = self.client.post(url)
+                else:
+                    response = self.client.get(url)
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_availability_for_comment_edit_and_delete(self):
@@ -44,10 +47,7 @@ class TestRoutes(TestCase):
             (self.reader, HTTPStatus.NOT_FOUND),
         )
         for user, status in users_statuses:
-            # Логиним пользователя в клиенте:
             self.client.force_login(user)
-            # Для каждой пары "пользователь - ожидаемый ответ"
-            # перебираем имена тестируемых страниц:
             for name in ('news:edit', 'news:delete'):
                 with self.subTest(user=user, name=name):
                     url = reverse(name, args=(self.comment.id,))
