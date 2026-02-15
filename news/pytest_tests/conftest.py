@@ -9,6 +9,20 @@ import pytest
 from news.models import News, Comment
 
 
+COMMENT_TEXT = {
+    'text': 'Новый текст',
+}
+
+
+@pytest.fixture(autouse=True)
+def _enable_db_access_for_all_tests(db):
+    """
+    Автоматически предоставляет доступ к базе данных для всех тестов.
+    Включает поддержку транзакций и очистки БД после каждого теста.
+    """
+    pass
+
+
 @pytest.fixture
 def author(django_user_model):
     return django_user_model.objects.create(username='Олег')
@@ -35,17 +49,12 @@ def not_author_client(not_author):
 
 @pytest.fixture
 def news():
-    news = News.objects.create(
-        title='Заголовок',
-        text='Текст новости',
-    )
-    return news
+    return News.objects.create(title='Заголовок', text='Текст новости',)
 
 
 @pytest.fixture
 def all_news():
     today = datetime.today()
-
     news_objects = [
         News(
             title=f'Новость {index}',
@@ -56,44 +65,30 @@ def all_news():
     ]
 
     News.objects.bulk_create(news_objects)
-    return News.objects.all() 
+    return News.objects.all()
+
 
 @pytest.fixture
 def comment(news, author):
-    comment = Comment.objects.create(
-        news=news,
-        author=author,
-        text='Текст комментария',
+    return Comment.objects.create(
+        news=news, author=author, text='Текст комментария',
     )
-    return comment
+
+@pytest.fixture
+def get_url():
+    """Фабрика для получения URL"""
+    def _get_url(name, obj=None):
+        if obj:
+            return reverse(name, args=(obj.id,))
+        return reverse(name)
+    return _get_url
 
 
 @pytest.fixture
-def comment_id(comment):
-    """Возвращает кортеж с id комментария."""
-    return (comment.id,)
+def edit_url(comment):
+    return reverse('news:edit', args=(comment.id,))
 
 
 @pytest.fixture
-def news_id(news):
-    """Возвращает кортеж с id новости."""
-    return (news.id,)
-
-
-@pytest.fixture
-def form_data():
-    return {
-        'text': 'Новый текст',
-    }
-
-
-@pytest.fixture
-def detail_url(news_id):
-    """Возвращает URL страницы деталей новости."""
-    return reverse('news:detail', args=news_id)
-
-
-@pytest.fixture
-def home_url():
-    """URL главной страницы."""
-    return reverse('news:home')
+def delete_url(comment):
+    return reverse('news:delete', args=(comment.id,))

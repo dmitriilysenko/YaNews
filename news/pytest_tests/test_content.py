@@ -5,7 +5,6 @@ import pytest
 from news.forms import CommentForm
 
 
-@pytest.mark.django_db
 @pytest.mark.usefixtures('all_news')
 def test_news_count(client, home_url):
     response = client.get(home_url)
@@ -13,7 +12,6 @@ def test_news_count(client, home_url):
     assert object_list.count() == settings.NEWS_COUNT_ON_HOME_PAGE
 
 
-@pytest.mark.django_db
 @pytest.mark.usefixtures('all_news')
 def test_news_order(client, home_url):
     response = client.get(home_url)
@@ -23,7 +21,6 @@ def test_news_order(client, home_url):
     assert all_dates == sorted_dates
 
 
-@pytest.mark.django_db
 def test_comments_order(client, detail_url):
     response = client.get(detail_url)
     assert 'news' in response.context
@@ -34,7 +31,6 @@ def test_comments_order(client, detail_url):
     assert all_timestamps == sorted_timestamps
 
 
-@pytest.mark.django_db
 def test_anonymous_client_has_no_form(client, detail_url):
     response = client.get(detail_url)
     assert 'form' not in response.context

@@ -39,8 +39,8 @@ def test_user_cant_use_bad_words(author_client, detail_url):
     assert Comment.objects.count() == 0
 
 
-def test_author_can_delete_comment(author_client, comment_id, detail_url):
-    delete_url = reverse('news:delete', args=comment_id)
+def test_author_can_delete_comment(author_client, comment, detail_url):
+    delete_url = reverse('news:delete', args=comment.id)
     url_to_comments = detail_url + '#comments'
     response = author_client.delete(delete_url)
     assertRedirects(response, url_to_comments)
@@ -49,16 +49,16 @@ def test_author_can_delete_comment(author_client, comment_id, detail_url):
 
 
 def test_user_cant_delete_comment_of_another_user(
-        not_author_client, comment_id):
-    delete_url = reverse('news:delete', args=comment_id)
+        not_author_client, comment):
+    delete_url = reverse('news:delete', args=comment.id)
     response = not_author_client.delete(delete_url)
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert Comment.objects.count() == 1
 
 
 def test_author_can_edit_comment(
-        author_client, comment_id, detail_url, form_data, comment):
-    edit_url = reverse('news:edit', args=comment_id)
+        author_client, detail_url, form_data, comment):
+    edit_url = reverse('news:edit', args=comment.id)
     response = author_client.post(edit_url, data=form_data)
     url_to_comments = detail_url + '#comments'
     assertRedirects(response, url_to_comments)
@@ -67,9 +67,9 @@ def test_author_can_edit_comment(
 
 
 def test_user_cant_edit_comment_of_another_user(
-        not_author_client, form_data, comment_id, comment):
+        not_author_client, form_data, comment):
     initial_text = comment.text
-    edit_url = reverse('news:edit', args=comment_id)
+    edit_url = reverse('news:edit', args=comment.id)
     response = not_author_client.post(edit_url, data=form_data)
     assert response.status_code == HTTPStatus.NOT_FOUND
     comment.refresh_from_db()
