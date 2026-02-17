@@ -27,7 +27,6 @@ def test_user_can_create_comment(
     assert new_comment.news == news
 
 
-@pytest.mark.django_db
 def test_anonymous_user_cant_create_comment(client, detail_url, login_url):
     comments_number = Comment.objects.count()
     response = client.post(detail_url, data=COMMENT_TEXT)
@@ -75,10 +74,13 @@ def test_author_can_edit_comment(
     assert comment_after.created == comment_before.created
 
 
-@pytest.mark.parametrize('url_fixture, method', [
-    (lf('delete_url'), 'delete'),
-    (lf('edit_url'), 'post'),
-])
+@pytest.mark.parametrize(
+    'url_fixture, method',
+    (
+        (lf('delete_url'), 'delete'),
+        (lf('edit_url'), 'post'),
+    )
+)
 def test_user_cant_modify_comment_of_another_user(
     not_author_client, url_fixture, method, comment
 ):
