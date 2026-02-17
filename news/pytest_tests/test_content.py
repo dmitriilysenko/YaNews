@@ -8,6 +8,7 @@ from news.forms import CommentForm
 @pytest.mark.usefixtures('all_news')
 def test_news_count(client, home_url):
     response = client.get(home_url)
+    assert 'object_list' in response.context
     object_list = response.context['object_list']
     assert object_list.count() == settings.NEWS_COUNT_ON_HOME_PAGE
 

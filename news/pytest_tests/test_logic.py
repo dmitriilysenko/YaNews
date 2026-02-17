@@ -1,30 +1,41 @@
 from http import HTTPStatus
 
-from django.urls import reverse
-
 from pytest_django.asserts import assertRedirects, assertFormError
+from pytest_lazyfixture import lazy_fixture as lf
 import pytest
-
 
 from news.forms import BAD_WORDS, WARNING
 from news.models import Comment
 
+from .assertions import assert_comment_unchanged
+from .comments_data import COMMENT_TEXT
+
 
 def test_user_can_create_comment(
-        author_client, author, form_data, news, detail_url):
-    response = author_client.post(detail_url, data=form_data)
+        author_client, author, news, detail_url
+):
+    existing_ids = list(Comment.objects.values_list('id', flat=True))
+    response = author_client.post(detail_url, data=COMMENT_TEXT)
     assertRedirects(response, f'{detail_url}#comments')
-    assert Comment.objects.count() == 1
-    new_comment = Comment.objects.get()
-    assert new_comment.news == news
-    assert new_comment.text == form_data['text']
+    new_comments = Comment.objects.exclude(id__in=existing_ids)
+    assert new_comments.count() == 1, (
+        f'Должен создаваться 1 комментарий, создано: {new_comments.count()}'
+    )
+    new_comment = new_comments.get()
+    assert new_comment.text == COMMENT_TEXT['text']
     assert new_comment.author == author
+    assert new_comment.news == news
 
 
 @pytest.mark.django_db
-def test_anonymous_user_cant_create_comment(client, form_data, detail_url):
-    client.post(detail_url, data=form_data)
-    assert Comment.objects.count() == 0
+def test_anonymous_user_cant_create_comment(client, detail_url, login_url):
+    comments_number = Comment.objects.count()
+    response = client.post(detail_url, data=COMMENT_TEXT)
+    assertRedirects(response, f'{login_url}?next={detail_url}')
+    assert Comment.objects.count() == comments_number, (
+        'Анонимный пользователь не должен иметь возможность '
+        'оставить комментарий'
+    )
 
 
 def test_user_cant_use_bad_words(author_client, detail_url):
@@ -39,38 +50,43 @@ def test_user_cant_use_bad_words(author_client, detail_url):
     assert Comment.objects.count() == 0
 
 
-def test_author_can_delete_comment(author_client, comment, detail_url):
-    delete_url = reverse('news:delete', args=comment.id)
-    url_to_comments = detail_url + '#comments'
+def test_author_can_delete_comment(
+        author_client, detail_url, delete_url):
+    comments_number = Comment.objects.count()
     response = author_client.delete(delete_url)
-    assertRedirects(response, url_to_comments)
+    assertRedirects(response, f'{detail_url}#comments')
+    assert Comment.objects.count() == comments_number - 1, (
+        'Количество комментариев после удаления должно уменьшиться на 1'
+    )
     assert response.status_code == HTTPStatus.FOUND
-    assert Comment.objects.count() == 0
-
-
-def test_user_cant_delete_comment_of_another_user(
-        not_author_client, comment):
-    delete_url = reverse('news:delete', args=comment.id)
-    response = not_author_client.delete(delete_url)
-    assert response.status_code == HTTPStatus.NOT_FOUND
-    assert Comment.objects.count() == 1
 
 
 def test_author_can_edit_comment(
-        author_client, detail_url, form_data, comment):
-    edit_url = reverse('news:edit', args=comment.id)
-    response = author_client.post(edit_url, data=form_data)
-    url_to_comments = detail_url + '#comments'
-    assertRedirects(response, url_to_comments)
-    comment.refresh_from_db()
-    assert comment.text == form_data['text']
+        author_client, detail_url, edit_url, comment):
+    comments_number = Comment.objects.count()
+    comment_before = comment
+    response = author_client.post(edit_url, data=COMMENT_TEXT)
+    assertRedirects(response, f'{detail_url}#comments')
+    comment_after = Comment.objects.get(id=comment.id)
+    assert Comment.objects.count() == comments_number
+    assert comment_after.text == COMMENT_TEXT['text']
+    assert comment_after.author == comment_before.author
+    assert comment_after.news == comment_before.news
+    assert comment_after.created == comment_before.created
 
 
-def test_user_cant_edit_comment_of_another_user(
-        not_author_client, form_data, comment):
-    initial_text = comment.text
-    edit_url = reverse('news:edit', args=comment.id)
-    response = not_author_client.post(edit_url, data=form_data)
+@pytest.mark.parametrize('url_fixture, method', [
+    (lf('delete_url'), 'delete'),
+    (lf('edit_url'), 'post'),
+])
+def test_user_cant_modify_comment_of_another_user(
+    not_author_client, url_fixture, method, comment
+):
+    comments_number = Comment.objects.count()
+    comment_before = comment
+    response = not_author_client.delete(url_fixture) if method == 'delete' \
+        else not_author_client.post(url_fixture, data=COMMENT_TEXT)
     assert response.status_code == HTTPStatus.NOT_FOUND
-    comment.refresh_from_db()
-    assert comment.text == initial_text
+    assert Comment.objects.count() == comments_number
+    comment_after = Comment.objects.get(id=comment.id)
+    assert_comment_unchanged(comment_before, comment_after)

@@ -9,17 +9,9 @@ import pytest
 from news.models import News, Comment
 
 
-COMMENT_TEXT = {
-    'text': 'Новый текст',
-}
-
-
 @pytest.fixture(autouse=True)
 def _enable_db_access_for_all_tests(db):
-    """
-    Автоматически предоставляет доступ к базе данных для всех тестов.
-    Включает поддержку транзакций и очистки БД после каждого теста.
-    """
+    """Автоматически предоставляет доступ к базе данных для всех тестов."""
     pass
 
 
@@ -76,7 +68,7 @@ def comment(news, author):
 
 @pytest.fixture
 def get_url():
-    """Фабрика для получения URL"""
+    """Фабрика для получения URL."""
     def _get_url(name, obj=None):
         if obj:
             return reverse(name, args=(obj.id,))
@@ -85,10 +77,42 @@ def get_url():
 
 
 @pytest.fixture
-def edit_url(comment):
-    return reverse('news:edit', args=(comment.id,))
+def home_url(get_url):
+    """URL главной страницы."""
+    return get_url('news:home')
 
 
 @pytest.fixture
-def delete_url(comment):
-    return reverse('news:delete', args=(comment.id,))
+def login_url(get_url):
+    """URL страницы входа."""
+    return get_url('users:login')
+
+
+@pytest.fixture
+def logout_url(get_url):
+    """URL страницы выхода."""
+    return get_url('users:logout')
+
+
+@pytest.fixture
+def signup_url(get_url):
+    """URL страницы регистрации."""
+    return get_url('users:signup')
+
+
+@pytest.fixture
+def detail_url(news, get_url):
+    """URL детальной страницы новости."""
+    return get_url('news:detail', news)
+
+
+@pytest.fixture
+def edit_url(comment, get_url):
+    """URL редактирования комментария."""
+    return get_url('news:edit', comment)
+
+
+@pytest.fixture
+def delete_url(comment, get_url):
+    """URL удаления комментария."""
+    return get_url('news:delete', comment)
